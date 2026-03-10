@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Previsão de Pesca</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#0b1e2d;
+color:white;
+text-align:center;
+margin:0;
+}
+
+header{
+background:#0f3d5e;
+padding:20px;
+font-size:28px;
+}
+
+.container{
+padding:20px;
+}
+
+.card{
+background:#133b55;
+padding:20px;
+margin:10px;
+border-radius:10px;
+}
+
+button{
+padding:10px 20px;
+font-size:16px;
+background:#28a745;
+color:white;
+border:none;
+border-radius:5px;
+cursor:pointer;
+}
+
+.result{
+font-size:28px;
+margin-top:20px;
+}
+
+.good{color:#00ff88;}
+.medium{color:#ffd000;}
+.bad{color:#ff4d4d;}
+
+</style>
+</head>
+
+<body>
+
+<header>
+🎣 Previsão Inteligente de Pesca
+</header>
+
+<div class="container">
+
+<div class="card">
+<h2>Sua localização</h2>
+<p id="location">Detectando...</p>
+</div>
+
+<div class="card">
+<h2>Clima atual</h2>
+<p id="weather">Carregando...</p>
+</div>
+
+<div class="card">
+<h2>Fase da Lua</h2>
+<p id="moon">Carregando...</p>
+</div>
+
+<div class="card">
+<h2>Probabilidade de Pescar</h2>
+<div id="fishing" class="result">---</div>
+</div>
+
+<button onclick="getData()">Atualizar previsão</button>
+
+</div>
+
+<script>
+
+function getData(){
+
+navigator.geolocation.getCurrentPosition(function(pos){
+
+let lat = pos.coords.latitude
+let lon = pos.coords.longitude
+
+document.getElementById("location").innerHTML =
+"Latitude: "+lat.toFixed(3)+" | Longitude: "+lon.toFixed(3)
+
+getWeather(lat,lon)
+getMoon()
+
+})
+
+}
+
+function getWeather(lat,lon){
+
+fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+.then(res=>res.json())
+.then(data=>{
+
+let temp = data.current_weather.temperature
+let wind = data.current_weather.windspeed
+
+document.getElementById("weather").innerHTML =
+"Temperatura: "+temp+"°C<br>Vento: "+wind+" km/h"
+
+calculateFishing(temp,wind)
+
+})
+
+}
+
+function getMoon(){
+
+let today = new Date()
+let lp = 2551443
+let new_moon = new Date(1970,0,7,20,35,0)
+let phase = ((today.getTime() - new_moon.getTime())/1000) % lp
+let moon = Math.floor((phase/lp)*8)
+
+let phases = [
+"LUA NOVA",
+"CRESCENTE",
+"CRESCENTE",
+"CRESCENTE",
+"LUA CHEIA",
+"MINGUANTE",
+"MINGUANTE",
+"MINGUANTE"
+]
+
+document.getElementById("moon").innerHTML = phases[moon]
+
+}
+
+function calculateFishing(temp,wind){
+
+let score = 50
+
+if(temp>20 && temp<30) score +=20
+if(wind<15) score +=15
+if(wind>25) score -=15
+
+let result = ""
+let className=""
+
+if(score>80){
+result="🔥 EXTREMAMENTE ALTA"
+className="good"
+}
+else if(score>65){
+result="🟢 ALTA"
+className="good"
+}
+else if(score>45){
+result="🟡 MODERADA"
+className="medium"
+}
+else if(score>25){
+result="🟠 BAIXA"
+className="bad"
+}
+else{
+result="🔴 EXTREMAMENTE BAIXA"
+className="bad"
+}
+
+let el = document.getElementById("fishing")
+el.innerHTML=result
+el.className="result "+className
+
+}
+
+getData()
+
+</script>
+
+</body>
+</html>

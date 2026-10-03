@@ -1,192 +1,344 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Previsão de Pesca</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IPTV Player - iOS Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: #1c1c1e;
+            --accent: #0a84ff;
+            --text-main: #ffffff;
+            --text-sub: #8e8e93;
+            --danger: #ff453a;
+        }
 
-<style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-body{
-font-family:Arial;
-background:#0b1e2d;
-color:white;
-text-align:center;
-margin:0;
-}
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding-bottom: 30px;
+        }
 
-header{
-background:#0f3d5e;
-padding:20px;
-font-size:28px;
-}
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(28, 28, 30, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 15px;
+            border-bottom: 0.5px solid #38383a;
+            text-align: center;
+        }
 
-.container{
-padding:20px;
-}
+        header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
 
-.card{
-background:#133b55;
-padding:20px;
-margin:10px;
-border-radius:10px;
-}
+        .container {
+            padding: 15px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
 
-button{
-padding:10px 20px;
-font-size:16px;
-background:#28a745;
-color:white;
-border:none;
-border-radius:5px;
-cursor:pointer;
-}
+        /* Player Container */
+        .player-wrapper {
+            position: sticky;
+            top: 60px;
+            z-index: 90;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
 
-.result{
-font-size:28px;
-margin-top:20px;
-}
+        video {
+            width: 100%;
+            aspect-ratio: 16/9;
+            display: block;
+            background: #000;
+        }
 
-.good{color:#00ff88;}
-.medium{color:#ffd000;}
-.bad{color:#ff4d4d;}
+        .player-info {
+            padding: 10px 15px;
+            background: var(--card-bg);
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-</style>
+        /* Forms & Inputs */
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid #38383a;
+            border-radius: 10px;
+            padding: 12px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+        }
+
+        button {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 18px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button:active {
+            opacity: 0.7;
+        }
+
+        /* List Status Messages */
+        #statusMsg {
+            font-size: 13px;
+            color: var(--text-sub);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* Channel List */
+        .channel-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .channel-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .channel-name {
+            font-size: 15px;
+            font-weight: 500;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-right: 10px;
+        }
+
+        .btn-play {
+            background: #30d158;
+            padding: 6px 12px;
+            font-size: 13px;
+            border-radius: 6px;
+        }
+
+        .btn-external {
+            background: #5e5ce6;
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+            margin-left: 5px;
+            text-decoration: none;
+            color: white;
+            display: inline-block;
+        }
+
+        .notice-box {
+            background: #2c2c2e;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-top: 20px;
+            line-height: 1.4;
+        }
+    </style>
 </head>
-
 <body>
 
-<header>
-🎣 Previsão Inteligente de Pesca
-</header>
+    <header>
+        <h1>IPTV Player iOS</h1>
+    </header>
 
-<div class="container">
+    <div class="container">
+        <!-- Reprodução de Vídeo -->
+        <div class="player-wrapper">
+            <video id="videoPlayer" controls playsinline webkit-playsinline></video>
+            <div class="player-info">
+                <span id="currentChannel">Nenhum canal selecionado</span>
+            </div>
+        </div>
 
-<div class="card">
-<h2>Sua localização</h2>
-<p id="location">Detectando...</p>
-</div>
+        <!-- Carregador de Lista -->
+        <div class="input-group">
+            <input type="text" id="m3uUrl" placeholder="Cole o link da lista .m3u ou .m3u8">
+            <button onclick="loadPlaylist()">Carregar</button>
+        </div>
 
-<div class="card">
-<h2>Clima atual</h2>
-<p id="weather">Carregando...</p>
-</div>
+        <div id="statusMsg">Insira uma URL válida para carregar os canais.</div>
 
-<div class="card">
-<h2>Fase da Lua</h2>
-<p id="moon">Carregando...</p>
-</div>
+        <!-- Lista de Canais Renderizados -->
+        <div class="channel-list" id="channelContainer"></div>
 
-<div class="card">
-<h2>Probabilidade de Pescar</h2>
-<div id="fishing" class="result">---</div>
-</div>
+        <div class="notice-box">
+            <strong>Dica para iPhone:</strong> Se o canal não rodar no navegador devido a restrições HTTP/CORS do Safari, clique em <strong>"VLC"</strong> para abrir diretamente no aplicativo do VLC para iOS.
+        </div>
+    </div>
 
-<button onclick="getData()">Atualizar previsão</button>
+    <script>
+        const video = document.getElementById('videoPlayer');
+        const channelContainer = document.getElementById('channelContainer');
+        const statusMsg = document.getElementById('statusMsg');
+        const currentChannelLabel = document.getElementById('currentChannel');
+        let hlsEngine = null;
 
-</div>
+        // 1. Função para carregar e processar a lista M3U
+        async function loadPlaylist() {
+            const url = document.getElementById('m3uUrl').value.trim();
+            if (!url) {
+                alert('Por favor, informe a URL da lista.');
+                return;
+            }
 
-<script>
+            statusMsg.innerText = "Carregando lista...";
+            channelContainer.innerHTML = "";
 
-function getData(){
+            try {
+                let content = await fetchPlaylistContent(url);
+                parseAndRenderM3U(content);
+            } catch (err) {
+                console.warn("Tentativa direta falhou, tentando via CORS Proxy...", err);
+                try {
+                    // Fallback usando proxy CORS para contornar restrições do Safari
+                    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+                    let content = await fetchPlaylistContent(proxyUrl);
+                    parseAndRenderM3U(content);
+                } catch (proxyErr) {
+                    statusMsg.innerText = "Erro ao carregar lista. Verifique a URL ou o acesso CORS do servidor.";
+                    console.error("Erro final:", proxyErr);
+                }
+            }
+        }
 
-navigator.geolocation.getCurrentPosition(function(pos){
+        async function fetchPlaylistContent(targetUrl) {
+            const response = await fetch(targetUrl);
+            if (!response.ok) throw new Error('Falha ao baixar arquivo');
+            return await response.text();
+        }
 
-let lat = pos.coords.latitude
-let lon = pos.coords.longitude
+        // 2. Parser simplificado de M3U
+        function parseAndRenderM3U(m3uText) {
+            const lines = m3uText.split('\n');
+            const channels = [];
+            let currentName = "";
 
-document.getElementById("location").innerHTML =
-"Latitude: "+lat.toFixed(3)+" | Longitude: "+lon.toFixed(3)
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if (line.startsWith('#EXTINF:')) {
+                    const nameParts = line.split(',');
+                    currentName = nameParts.length > 1 ? nameParts.slice(1).join(',') : "Canal Sem Nome";
+                } else if (line.length > 0 && !line.startsWith('#')) {
+                    if (currentName) {
+                        channels.push({ name: currentName, url: line });
+                        currentName = "";
+                    }
+                }
+            }
 
-getWeather(lat,lon)
-getMoon()
+            if (channels.length === 0) {
+                statusMsg.innerText = "Nenhum canal válido foi encontrado nesta lista.";
+                return;
+            }
 
-})
+            statusMsg.innerText = `${channels.length} canais carregados com sucesso.`;
+            renderChannels(channels);
+        }
 
-}
+        // 3. Renderiza a lista na tela
+        function renderChannels(channels) {
+            channelContainer.innerHTML = "";
+            
+            // Exibe até 100 canais para evitar sobrecarregar o Safari do iOS
+            const maxDisplay = Math.min(channels.length, 100);
 
-function getWeather(lat,lon){
+            for (let i = 0; i < maxDisplay; i++) {
+                const ch = channels[i];
+                const card = document.createElement('div');
+                card.className = 'channel-card';
 
-fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
-.then(res=>res.json())
-.then(data=>{
+                const nameEl = document.createElement('div');
+                nameEl.className = 'channel-name';
+                nameEl.innerText = ch.name;
 
-let temp = data.current_weather.temperature
-let wind = data.current_weather.windspeed
+                const actions = document.createElement('div');
 
-document.getElementById("weather").innerHTML =
-"Temperatura: "+temp+"°C<br>Vento: "+wind+" km/h"
+                const playBtn = document.createElement('button');
+                playBtn.className = 'btn-play';
+                playBtn.innerText = 'Assistir';
+                playBtn.onclick = () => playStream(ch.url, ch.name);
 
-calculateFishing(temp,wind)
+                // Botão para abrir no app VLC caso o Safari bloqueie
+                const vlcBtn = document.createElement('a');
+                vlcBtn.className = 'btn-external';
+                vlcBtn.innerText = 'VLC';
+                vlcBtn.href = 'vlc://' + ch.url;
 
-})
+                actions.appendChild(playBtn);
+                actions.appendChild(vlcBtn);
 
-}
+                card.appendChild(nameEl);
+                card.appendChild(actions);
 
-function getMoon(){
+                channelContainer.appendChild(card);
+            }
+        }
 
-let today = new Date()
-let lp = 2551443
-let new_moon = new Date(1970,0,7,20,35,0)
-let phase = ((today.getTime() - new_moon.getTime())/1000) % lp
-let moon = Math.floor((phase/lp)*8)
+        // 4. Mecanismo de reprodução compatível com iOS / Safari
+        function playStream(streamUrl, channelName) {
+            currentChannelLabel.innerText = channelName;
 
-let phases = [
-"LUA NOVA",
-"CRESCENTE",
-"CRESCENTE",
-"CRESCENTE",
-"LUA CHEIA",
-"MINGUANTE",
-"MINGUANTE",
-"MINGUANTE"
-]
-
-document.getElementById("moon").innerHTML = phases[moon]
-
-}
-
-function calculateFishing(temp,wind){
-
-let score = 50
-
-if(temp>20 && temp<30) score +=20
-if(wind<15) score +=15
-if(wind>25) score -=15
-
-let result = ""
-let className=""
-
-if(score>80){
-result="🔥 EXTREMAMENTE ALTA"
-className="good"
-}
-else if(score>65){
-result="🟢 ALTA"
-className="good"
-}
-else if(score>45){
-result="🟡 MODERADA"
-className="medium"
-}
-else if(score>25){
-result="🟠 BAIXA"
-className="bad"
-}
-else{
-result="🔴 EXTREMAMENTE BAIXA"
-className="bad"
-}
-
-let el = document.getElementById("fishing")
-el.innerHTML=result
-el.className="result "+className
-
-}
-
-getData()
-
-</script>
-
+            // Tratamento Nativo para iOS Safari
+            if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = streamUrl;
+                video.play().catch(e => {
+                    alert("Não foi possível reproduzir este canal no Safari. Tente abri-lo pelo botão VLC.");
+                });
+            } 
+            // Tratamento Fallback via HLS.js (outros navegadores ou iPads mais novos)
+            else if (Hls.isSupported()) {
+                if (hlsEngine) hlsEngine.destroy();
+                hlsEngine = new Hls();
+                hlsEngine.loadSource(streamUrl);
+                hlsEngine.attachMedia(video);
+                hlsEngine.on(Hls.Events.MANIFEST_PARSED, function () {
+                    video.play();
+                });
+            } else {
+                alert("Seu navegador não suporta a reprodução deste formato de vídeo.");
+            }
+        }
+    </script>
 </body>
 </html>
